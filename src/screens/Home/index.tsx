@@ -1,68 +1,85 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback, useEffect } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { SearchBar } from '../../components/SearchBar';
-import { LoginDataItem } from '../../components/LoginDataItem';
+import { LoginDataItem } from "../../components/LoginDataItem";
+import { SearchBar } from "../../components/SearchBar";
+
+import AppInfo from "../../../app.json";
 
 import {
-  Container,
-  LoginList,
-  EmptyListContainer,
-  EmptyListMessage
-} from './styles';
+	Container,
+	LoginList,
+	EmptyListContainer,
+	EmptyListMessage,
+} from "./styles";
 
 interface LoginDataProps {
-  id: string;
-  title: string;
-  email: string;
-  password: string;
-};
+	id: string;
+	title: string;
+	email: string;
+	password: string;
+}
 
 type LoginListDataProps = LoginDataProps[];
 
+export const key = "@" + AppInfo.name + ":";
+export const loginKey = key + "logins";
+
 export function Home() {
-  // const [searchListData, setSearchListData] = useState<LoginListDataProps>([]);
-  // const [data, setData] = useState<LoginListDataProps>([]);
+	const [searchListData, setSearchListData] = useState<LoginListDataProps>([]);
+	const [data, setData] = useState<LoginListDataProps>([]);
 
-  async function loadData() {
-    // Get asyncStorage data, use setSearchListData and setData
-  }
-  useEffect(() => {
-    loadData();
-  }, []);
+	async function loadData() {
+		const result = await AsyncStorage.getItem(loginKey);
+		const data: LoginListDataProps = result ? JSON.parse(result) : [];
 
-  useFocusEffect(useCallback(() => {
-    loadData();
-  }, []));
+		setSearchListData(data);
+		setData(data);
+	}
 
-  function handleFilterLoginData(search: string) {
-    // Filter results inside data, save with setSearchListData
-  }
+	useFocusEffect(
+		useCallback(() => {
+			loadData();
+		}, [])
+	);
 
-  return (
-    <Container>
-      <SearchBar
-        placeholder="Pesquise pelo nome do serviço"
-        onChangeText={(value) => handleFilterLoginData(value)}
-      />
+	function handleFilterLoginData(search: string) {
+		//console.log("handleFilterLoginData |> data:", data);
+		if (data.length) {
+			const match = new RegExp(search, "gi");
+			const res = data.filter((loginData) => loginData.title.match(match));
+			//console.log("Found results:", res);
 
-      <LoginList
-        keyExtractor={(item) => item.id}
-        data={searchListData}
-        ListEmptyComponent={(
-          <EmptyListContainer>
-            <EmptyListMessage>Nenhum item a ser mostrado</EmptyListMessage>
-          </EmptyListContainer>
-        )}
-        renderItem={({ item: loginData }) => {
-          return <LoginDataItem
-            title={loginData.title}
-            email={loginData.email}
-            password={loginData.password}
-          />
-        }}
-      />
-    </Container>
-  )
+			setSearchListData(res);
+		}
+	}
+
+	return (
+		<Container>
+			<SearchBar
+				placeholder="Pesquise pelo nome do serviço"
+				onChangeText={(value) => handleFilterLoginData(value)}
+			/>
+
+			<LoginList
+				keyExtractor={(item) => item.id}
+				data={searchListData}
+				ListEmptyComponent={
+					<EmptyListContainer>
+						<EmptyListMessage>Nenhum item a ser mostrado</EmptyListMessage>
+					</EmptyListContainer>
+				}
+				renderItem={({ item: loginData }) => {
+					return (
+						<LoginDataItem
+							title={loginData.title}
+							email={loginData.email}
+							password={loginData.password}
+						/>
+					);
+				}}
+			/>
+		</Container>
+	);
 }
