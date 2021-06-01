@@ -1,11 +1,8 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { useFocusEffect } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
 
+import { LoginData, useStorageData } from "../../hooks/storageData";
 import { LoginDataItem } from "../../components/LoginDataItem";
 import { SearchBar } from "../../components/SearchBar";
-
-import AppInfo from "../../../app.json";
 
 import {
 	Container,
@@ -14,71 +11,55 @@ import {
 	EmptyListMessage,
 } from "./styles";
 
-interface LoginDataProps {
-	id: string;
-	title: string;
-	email: string;
-	password: string;
-}
-
-type LoginListDataProps = LoginDataProps[];
-
-export const key = "@" + AppInfo.name + ":";
-export const loginKey = key + "logins";
-
 export function Home() {
-	const [searchListData, setSearchListData] = useState<LoginListDataProps>([]);
-	const [data, setData] = useState<LoginListDataProps>([]);
-
-	async function loadData() {
-		const result = await AsyncStorage.getItem(loginKey);
-		const data: LoginListDataProps = result ? JSON.parse(result) : [];
-
-		setSearchListData(data);
-		setData(data);
-	}
-
-	useFocusEffect(
-		useCallback(() => {
-			loadData();
-		}, [])
-	);
+	const { allLoginsData } = useStorageData();
+	const [searchListData, setSearchListData] =
+		useState<LoginData[]>(allLoginsData);
 
 	function handleFilterLoginData(search: string) {
-		//console.log("handleFilterLoginData |> data:", data);
-		if (data.length) {
+		if (allLoginsData.length && search.length) {
+			//console.log("Here");
 			const match = new RegExp(search, "gi");
-			const res = data.filter((loginData) => loginData.title.match(match));
-			//console.log("Found results:", res);
+			const res = allLoginsData.filter((loginData) =>
+				loginData.title.match(match)
+			);
+			console.log("Found results:", res);
 
-			setSearchListData(res);
+			setSearchListData((_oldValue) => res);
+		} else {
+			//console.log("out");
+			setSearchListData((_oldValue) => allLoginsData);
 		}
 	}
+
+	useEffect(() => {
+		handleFilterLoginData("");
+		// console.log("searchListData:", searchListData);
+		// console.log("allLoginsData:", allLoginsData);
+	}, []);
 
 	return (
 		<Container>
 			<SearchBar
 				placeholder="Pesquise pelo nome do serviço"
-				onChangeText={(value) => handleFilterLoginData(value)}
+				onChangeText={(search) => handleFilterLoginData(search)}
 			/>
 
 			<LoginList
-				keyExtractor={(item) => item.id}
+				keyExtractor={(item: LoginData) => item.id}
 				data={searchListData}
 				ListEmptyComponent={
 					<EmptyListContainer>
 						<EmptyListMessage>Nenhum item a ser mostrado</EmptyListMessage>
 					</EmptyListContainer>
 				}
-				renderItem={({ item: loginData }) => {
-					return (
-						<LoginDataItem
-							title={loginData.title}
-							email={loginData.email}
-							password={loginData.password}
-						/>
-					);
-				}}
+				renderItem={({ item }) => (
+					<LoginDataItem
+						title={item.title}
+						email={item.email}
+						password={item.password}
+					/>
+				)}
 			/>
 		</Container>
 	);
